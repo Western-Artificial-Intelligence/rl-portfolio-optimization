@@ -44,16 +44,54 @@ By integrating **quantitative market data** with **qualitative sentiment signals
 [React/Streamlit Dashboard Visualization]
 
 
-## 🚀 Getting Started  
+## 🚀 Getting Started
 
-### 1. Environment Setup  
-It is **recommended you set up your environment** before our first team meeting to identify any issues early.  
+### 1. Environment Setup
 
-#### Prerequisites  
-- Python 3.10+  
-- Node.js (for frontend)  
-- Git & GitHub account  
-- Access to Bloomberg or Yahoo Finance API  
+It is **strongly recommended** you set up your development environment **before our first team meeting** to ensure everything installs correctly and to flag any setup issues early.
+
+---
+
+### 🧩 Prerequisites
+Before you begin, make sure you have the following installed:
+- **Python 3.10+**
+- **Node.js** (for frontend/dashboard components)
+- **Git & GitHub account**
+- **Access to Bloomberg or Yahoo Finance API** (for financial data)
+
+---
+
+### ⚙️ Step 1: Install [UV](https://docs.astral.sh/uv/)
+
+UV is a **blazing-fast Python package manager and environment tool** developed by Astral (creators of Ruff & Rye).  
+It replaces `pip`, `venv`, and `pip-tools` — managing dependencies, environments, and Python versions in one tool.
+
+#### macOS / Linux
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+### ⚙️ Step 2: Clone the Repo
+git clone https://github.com/hAlcLeite/Portfolio-Optimizer.git
+cd Portfolio-Optimizer
+
+
+### ⚙️ Step 3: Create and Activate a Virtual Environment
+uv venv
+
+Activate the environment
+source .venv/bin/activate    # macOS / Linux
+.venv\Scripts\activate       # Windows
+
+### ⚙️ Step 4: Install Dependencies
+uv pip install -r requirements.txt
+
+### ⚙️ Step 5: Run the Prohject
+uv run streamlit run app.py
+
+Or, to test a specific script:
+
+uv run main.py
+
 
 #### Clone Repository  
 ```bash
