@@ -83,9 +83,12 @@ source .venv/bin/activate    # macOS / Linux
 .venv\Scripts\activate       # Windows
 
 ### ⚙️ Step 4: Install Dependencies
-uv pip install -r requirements.txt
+uv pip install -r pyproject.toml
 
-### ⚙️ Step 5: Run the Prohject
+or simply:
+uv sync
+
+### ⚙️ Step 5: Run the Project
 uv run streamlit run app.py
 
 Or, to test a specific script:
