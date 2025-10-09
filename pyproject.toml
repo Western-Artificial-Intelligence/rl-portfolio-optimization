@@ -1,9 +1,25 @@
 [project]
 name = "portfolio-optimizer"
 version = "0.1.0"
-description = "Add your description here"
+description = "Hybrid reinforcement learning and NLP-driven portfolio optimization system"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
+
 dependencies = [
     "numpy>=2.0.2",
+    "pandas>=2.2.2",
+    "scikit-learn>=1.5.2",
+    "matplotlib>=3.9.2",
+    "seaborn>=0.13.2",
+    "torch>=2.3.0",
+    "torchvision>=0.18.0",
+    "torchaudio>=2.3.0",
+    "transformers>=4.44.2",
+    "stable-baselines3>=2.3.2",
+    "finbert-embedding>=1.0.3",
+    "yfinance>=0.2.43",
+    "streamlit>=1.38.0",
+    "requests>=2.32.3",
+    "tqdm>=4.66.4",
+    "beautifulsoup4>=4.12.3",
 ]
