@@ -3,10 +3,10 @@ name = "portfolio-optimizer"
 version = "0.1.0"
 description = "Hybrid reinforcement learning and NLP-driven portfolio optimization system"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10, <3.13"
 
 dependencies = [
-    "numpy>=2.0.2",
+    "numpy>=2.0.0",
     "pandas>=2.2.2",
     "scikit-learn>=1.5.2",
     "matplotlib>=3.9.2",
@@ -16,7 +16,7 @@ dependencies = [
     "torchaudio>=2.3.0",
     "transformers>=4.44.2",
     "stable-baselines3>=2.3.2",
-    "finbert-embedding>=0.1.5",
+    "finbert-embedding==0.1.5",
     "yfinance>=0.2.43",
     "streamlit>=1.38.0",
     "requests>=2.32.3",
