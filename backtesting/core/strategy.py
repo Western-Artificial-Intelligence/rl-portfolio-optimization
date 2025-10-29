@@ -7,8 +7,7 @@ class Strategy:
             return self.model.predict(state);
         
         weights = {
-            "AAPL": max(0, state["AAPL_sent"]),
-            "TSLA": max(0, state["TSLA_sent"])
+            "SQQQ": max(0, state["SQQQ_sent"])
         };
 
         total = sum(weights.values())
