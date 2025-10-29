@@ -1,4 +1,4 @@
-from data_handler import DataHandler;
+from .data_handler import DataHandler;
 def run_backtest(data, strategy, execution, portfolio, analyzer):
     handler = DataHandler(data);
     while True:

@@ -7,6 +7,7 @@ class PerformanceAnalyzer:
 
     def analyze(self, portfolio_history):
         df = pd.DataFrame(portfolio_history).set_index("time");
-        df["returns"] = df["values"].pct_change();
+        df["returns"] = df["value"].pct_change();
         self.results = df;
+        return df;
 

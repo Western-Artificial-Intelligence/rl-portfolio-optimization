@@ -12,4 +12,6 @@ class Strategy:
         };
 
         total = sum(weights.values())
+        if total == 0:
+            return {}
         return {k: v / total for k, v in weights.items()}
