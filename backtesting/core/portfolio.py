@@ -32,4 +32,5 @@ class PortfolioManager:
                 new_total_portfolio_value += shares * current_prices[f"{asset}_price"]
 
         self.history.append({"time": timestamp, "value": new_total_portfolio_value});
+
         return new_total_portfolio_value;
