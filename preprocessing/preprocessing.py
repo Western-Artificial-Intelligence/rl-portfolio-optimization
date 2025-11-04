@@ -1,37 +1,68 @@
 import yfinance as yf
+import pandas as pd
 
-def fetch_daily_stock_data_yf(symbol, start_date, end_date):
-    print(f"Fetching data for {symbol} from {start_date} to {end_date}...")
-    data = yf.download(symbol, start=start_date, end=end_date)
-    
-    if data.empty:
-        print(f"Warning: No data found for {symbol} between {start_date} and {end_date}")
+def fetch_daily_stock_data_yf(start_date, end_date, tickers = []):
+    if not tickers:
+        print("Warning: No tickers provided")
         return None
     
-    data.reset_index(inplace=True)
+    all_data = []
     
-    data = data[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']]
+    for symbol in tickers:
+        print(f"Fetching data for {symbol} from {start_date} to {end_date}...")
+        data = yf.download(symbol, start=start_date, end=end_date)
+        
+        if data.empty:
+            print(f"Warning: No data found for {symbol} between {start_date} and {end_date}")
+            continue
+        
+        data.reset_index(inplace=True)
+        
+        normalized_data = data[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']].copy()
+        normalized_data.rename(columns={
+            'Date': 'Datetime'
+        }, inplace=True)
+        
+        normalized_data['Symbol'] = symbol
+        
+        normalized_data = normalized_data[['Datetime', 'Symbol', 'Open', 'High', 'Low', 'Close', 'Volume']]
+        
+        all_data.append(normalized_data)
+        print(f"Successfully fetched {len(normalized_data)} records for {symbol}")
+        print(f"Date range: {normalized_data['Datetime'].iloc[0]} to {normalized_data['Datetime'].iloc[-1]}")
     
-    data.rename(columns={'Date': 'date'}, inplace=True)
+    if not all_data:
+        print("No data was successfully fetched for any ticker")
+        return None
     
-    data['date'] = data['date'].dt.strftime('%Y-%m-%d')
+    merged_data = pd.concat(all_data, ignore_index=True)
     
-    csv_filename = f"{symbol}_data.csv"
-    data.to_csv(csv_filename, index=False)
+    merged_data['Datetime'] = pd.to_datetime(merged_data['Datetime'])
+    merged_data.sort_values(['Datetime', 'Symbol'], inplace=True)
+    merged_data['Datetime'] = merged_data['Datetime'].dt.strftime('%Y-%m-%d')
     
-    print(f"Successfully saved {len(data)} records to {csv_filename}")
-    print(f"Date range: {data['date'].iloc[0]} to {data['date'].iloc[-1]}")
+    if len(tickers) == 1:
+        csv_filename = f"{tickers[0]}_data.csv"
+    else:
+        csv_filename = f"{'_'.join(tickers)}_aggregated_data.csv"
+    
+    merged_data.to_csv(csv_filename, index=False)
+    
+    print(f"\nSuccessfully saved aggregated data with {len(merged_data)} records to {csv_filename}")
+    print(f"Date range: {merged_data['Datetime'].min()} to {merged_data['Datetime'].max()}")
+    print(f"Symbols: {sorted(merged_data['Symbol'].unique())}")
+    print(f"Columns: {list(merged_data.columns)}")
     
     return csv_filename
 
 
 if __name__ == "__main__":
-    symbol = "SQQQ"
+    tickers = ["SQQQ", "AAPL", "PLTR"]
     start_date = "2005-01-01"
     end_date = "2023-12-31"
     
     try:
-        filename = fetch_daily_stock_data_yf(symbol, start_date, end_date)
+        filename = fetch_daily_stock_data_yf(start_date, end_date, tickers)
         if filename:
             print(f"\nData saved to: {filename}")
     except Exception as e:
