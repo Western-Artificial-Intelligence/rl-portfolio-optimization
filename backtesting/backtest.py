@@ -43,7 +43,7 @@ class ExecutionSimulator:
         for a, (shares, trade_price) in orders.items():
             cost = shares * trade_price;
             self.holdings[a] = self.holdings.get(a,0) + shares;
-            self.cash += cost;
+            self.cash -= cost;
 
         new_value = self._get_portfolio_value(prices);
         self.portfolio_value = new_value;

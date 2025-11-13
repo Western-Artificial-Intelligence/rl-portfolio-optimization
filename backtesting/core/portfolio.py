@@ -7,11 +7,15 @@ class PortfolioManager:
     def update(self, fills, current_prices, timestamp):
         for asset, fill in fills.items():
             target_value = fill["value"]
-            fill_price = fill["price"] 
+            fill_price = fill["price"]
 
             current_shares = self.positions.get(asset, 0)
-            
-            current_asset_value = current_shares * current_prices[f"{asset}_price"]
+            price_key = f"{asset}_price"
+            mark_price = current_prices.get(price_key, current_prices.get(asset))
+            if mark_price is None:
+                raise KeyError(f"Missing price for {asset}")
+
+            current_asset_value = current_shares * mark_price
 
             value_to_trade = target_value - current_asset_value
 
@@ -28,8 +32,10 @@ class PortfolioManager:
 
         new_total_portfolio_value = self.cash
         for asset, shares in self.positions.items():
-            if f"{asset}_price" in current_prices:
-                new_total_portfolio_value += shares * current_prices[f"{asset}_price"]
+            price_key = f"{asset}_price"
+            mark_price = current_prices.get(price_key, current_prices.get(asset))
+            if mark_price is not None:
+                new_total_portfolio_value += shares * mark_price
 
         self.history.append({"time": timestamp, "value": new_total_portfolio_value});
 

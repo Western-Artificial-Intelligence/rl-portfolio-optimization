@@ -1435,7 +1435,7 @@ requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.12.3" },
     { name = "finbert-embedding", specifier = "==0.1.5" },
     { name = "matplotlib", specifier = ">=3.9.2" },
-    { name = "numpy", specifier = ">=2.0.2" },
+    { name = "numpy", specifier = ">=2.0.0" },
     { name = "pandas", specifier = ">=2.2.2" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "scikit-learn", specifier = ">=1.5.2" },

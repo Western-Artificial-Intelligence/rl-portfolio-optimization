@@ -36,6 +36,7 @@ class ExecutionSimulator:
         }
 
         orders = {}
+        fills = {}
         for a in prices:
             diff_value = target_alloc.get(a, 0) - current_alloc.get(a, 0)
             if abs(diff_value) > 1e-8:
@@ -43,6 +44,10 @@ class ExecutionSimulator:
                 side = "buy" if shares_to_trade > 0 else "sell"
                 trade_price = self._apply_slippage(prices[a], side)
                 orders[a] = (shares_to_trade, trade_price)
+                fills[a] = {
+                    "value": target_alloc.get(a, 0),
+                    "price": trade_price,
+                }
 
         for a, (shares, trade_price) in orders.items():
             cost = shares * trade_price
@@ -60,6 +65,8 @@ class ExecutionSimulator:
             "prices": deepcopy(prices),
             "target_weights": deepcopy(target_weights)
         })
+
+        return fills
 
     def get_history(self):
         df = pd.DataFrame(self.history)

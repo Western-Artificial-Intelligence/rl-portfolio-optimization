@@ -71,7 +71,7 @@ It replaces `pip`, `venv`, and `pip-tools` — managing dependencies, environmen
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 ### ⚙️ Step 2: Clone the Repo
-git clone https://github.com/hAlcLeite/Portfolio-Optimizer.git
+git clone https://github.com/Western-Artificial-Intelligence/rl-portfolio-optimization.git
 cd Portfolio-Optimizer
 
 
@@ -98,5 +98,5 @@ uv run main.py
 
 #### Clone Repository  
 ```bash
-git clone https://github.com/hAlcLeite/Portfolio-Optimizer.git
+git clone https://github.com/Western-Artificial-Intelligence/rl-portfolio-optimization.git
 cd Portfolio-Optimizer

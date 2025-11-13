@@ -6,8 +6,9 @@ class Strategy:
         if self.model:
             return self.model.predict(state);
         
+        sentiment = state.get("sentiment_SQQQ", state.get("SQQQ_sent", 0))
         weights = {
-            "SQQQ": max(0, state["SQQQ_sent"])
+            "SQQQ": max(0, sentiment)
         };
 
         total = sum(weights.values())
