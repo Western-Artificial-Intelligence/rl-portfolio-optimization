@@ -5,6 +5,8 @@ scrape the full article text where possible, and save to:
 /naturalLanguageProcessing/data
 
 One note this also pulls from wsj, for these we can only parse summary and title, for yfinance we can pull full text
+
+Max 9 at once -> not worth it
 """
 
 import json
