@@ -9,14 +9,34 @@ from .execution import ExecutionSimulator
 class PortfolioEnv(gym.Env):
     metadata = {"render_modes": ["human"]}
 
-    def __init__(self, df, assets, initial_cash=1_000_000, window=1):
+    def __init__(
+        self,
+        df,
+        assets,
+        initial_cash=1_000_000,
+        window=1,
+        reward_mode="log_return",
+        reward_window=30,
+        risk_free_rate=0.0,
+        drawdown_penalty=0.0,
+    ):
         super().__init__()
+
+        valid_reward_modes = {"log_return", "simple_return", "risk_adjusted"}
+        if reward_mode not in valid_reward_modes:
+            raise ValueError(
+                f"Unknown reward mode '{reward_mode}'. Expected one of {valid_reward_modes}"
+            )
 
         self.df = df
         self.assets = assets
         self.n_assets = len(assets)
         self.initial_cash = initial_cash
         self.window = window
+        self.reward_mode = reward_mode
+        self.reward_window = reward_window
+        self.risk_free_rate = risk_free_rate
+        self.drawdown_penalty = drawdown_penalty
 
         self.data_handler = DataHandler(self.df)
         self.simulator = ExecutionSimulator(self.initial_cash)
@@ -34,6 +54,8 @@ class PortfolioEnv(gym.Env):
         self.prev_value = self.initial_cash
         self.portfolio_value = self.initial_cash
         self.portfolio_history = []
+        self.returns_history = []
+        self.high_watermark = self.initial_cash
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
@@ -44,6 +66,8 @@ class PortfolioEnv(gym.Env):
         self.portfolio_value = self.initial_cash
         self.prev_value = self.initial_cash
         self.portfolio_history = []
+        self.returns_history = []
+        self.high_watermark = self.initial_cash
 
         _, row = self.data_handler.next()
         obs = self._build_observation(row)
@@ -72,6 +96,7 @@ class PortfolioEnv(gym.Env):
 
         self.portfolio_value = self.simulator.portfolio_value
         self.portfolio_history.append(self.portfolio_value)
+        self.high_watermark = max(self.high_watermark, self.portfolio_value)
 
         reward = self._compute_reward()
 
@@ -89,7 +114,30 @@ class PortfolioEnv(gym.Env):
         )
 
     def _compute_reward(self):
-        reward = np.log(self.portfolio_value / self.prev_value)
+        if self.prev_value <= 0:
+            simple_return = 0.0
+        else:
+            simple_return = (self.portfolio_value - self.prev_value) / self.prev_value
+
+        self.returns_history.append(simple_return)
+        if len(self.returns_history) > self.reward_window:
+            self.returns_history.pop(0)
+
+        if self.reward_mode == "log_return":
+            reward = np.log(self.portfolio_value / self.prev_value)
+        elif self.reward_mode == "simple_return":
+            reward = simple_return
+        else:  # risk_adjusted
+            window_returns = np.array(self.returns_history[-self.reward_window :])
+            volatility = np.std(window_returns) if len(window_returns) > 1 else 0.0
+            per_step_rf = self.risk_free_rate / 252
+            excess = simple_return - per_step_rf
+            reward = excess / (volatility + 1e-8)
+
+        if self.drawdown_penalty > 0 and self.high_watermark > 0:
+            drawdown = (self.high_watermark - self.portfolio_value) / self.high_watermark
+            reward -= self.drawdown_penalty * max(drawdown, 0)
+
         self.prev_value = self.portfolio_value
         return reward
 
