@@ -25,124 +25,160 @@
 # =======================
 import blpapi
 import pandas as pd
-from blpapi import SessionOptions, Session
+from datetime import datetime
 
-# ------- CONFIGURATION -------
-START_DATE = "20180101"
-END_DATE   = "20250101"
-OUTPUT_PATH = "data/sp500_prices.csv"
+def main():
+    # 1. Setup Bloomberg Session
+    options = blpapi.SessionOptions()
+    options.setServerHost("localhost")
+    options.setServerPort(8194)
+    
+    session = blpapi.Session(options)
+    if not session.start():
+        print("❌ Failed to start session.")
+        return
 
-# We request the same fields as the NASDAQ dataset
-FIELDS = [
-    "PX_OPEN",
-    "PX_HIGH",
-    "PX_LOW",
-    "PX_LAST",
-    "PX_VOLUME"
-]
+    if not session.openService("//blp/refdata"):
+        print("❌ Failed to open //blp/refdata")
+        return
 
-# ------- BLOOMBERG CONNECTION -------
-options = SessionOptions()
-options.setServerHost("localhost")
-options.setServerPort(8194)
+    refDataService = session.getService("//blp/refdata")
 
-session = Session(options)
-if not session.start():
-    raise Exception("Failed to start Bloomberg session")
+    # ---------------------------------------------------------
+    # STEP 1: Get S&P 500 Constituents
+    # ---------------------------------------------------------
+    print("Requesting S&P 500 (SPX Index) member list...")
+    
+    index_req = refDataService.createRequest("ReferenceDataRequest")
+    index_req.append("securities", "SPX Index")
+    index_req.append("fields", "INDX_MEMBERS") 
+    
+    session.sendRequest(index_req)
 
-if not session.openService("//blp/refdata"):
-    raise Exception("Failed to open //blp/refdata service")
+    tickers = []
+    
+    while True:
+        event = session.nextEvent(500)
+        if event.eventType() == blpapi.Event.RESPONSE:
+            for msg in event:
+                if msg.hasElement("securityData"):
+                    sec_data_array = msg.getElement("securityData")
+                    for i in range(sec_data_array.numValues()):
+                        sec_data = sec_data_array.getValue(i)
+                        field_data = sec_data.getElement("fieldData")
+                        
+                        if field_data.hasElement("INDX_MEMBERS"):
+                            member_array = field_data.getElement("INDX_MEMBERS")
+                            for j in range(member_array.numValues()):
+                                member_data = member_array.getValue(j)
+                                
+                                # --- FIX 1: Robust Field Checking ---
+                                t = None
+                                if member_data.hasElement("Member Ticker and Exchange Code"):
+                                    t = member_data.getElementAsString("Member Ticker and Exchange Code")
+                                elif member_data.hasElement("Member Ticker"):
+                                    t = member_data.getElementAsString("Member Ticker")
+                                
+                                if t:
+                                    tickers.append(t)
+            break
+        elif event.eventType() == blpapi.Event.TIMEOUT:
+            continue
 
-service = session.getService("//blp/refdata")
+    print(f"Found {len(tickers)} S&P 500 constituents.")
 
-# ==========================================
-# STEP 1 — Retrieve S&P 500 Constituents
-# ==========================================
-print("Requesting S&P 500 (SPX Index) member list...")
+    # --- SAFETY CHECK ---
+    if not tickers:
+        print("❌ Error: No tickers found. Exiting to prevent crash.")
+        return
 
-ref_request = service.createRequest("ReferenceDataRequest")
-ref_request.getElement("securities").appendValue("SPX Index")
-ref_request.getElement("fields").appendValue("INDX_MEMBERS")
+    # ---------------------------------------------------------
+    # STEP 2: Normalize Tickers
+    # ---------------------------------------------------------
+    # Ensure all tickers end in ' US Equity'
+    clean_tickers = [f"{t.split()[0]} US Equity" for t in tickers]
+    
+    print(f"Sample normalized tickers: {clean_tickers[:3]}")
 
-session.sendRequest(ref_request)
+    # ---------------------------------------------------------
+    # STEP 3: Request Price History (Chunked)
+    # ---------------------------------------------------------
+    # S&P 500 is too large for one request. We MUST chunk it.
+    print("\nRequesting price history from Bloomberg...")
+    
+    all_data = []
+    BATCH_SIZE = 50 
+    
+    FIELDS = ["PX_LAST", "PX_OPEN", "PX_HIGH", "PX_LOW", "PX_VOLUME"]
+    START_DATE = "20180101"
+    END_DATE = datetime.today().strftime('%Y%m%d')
 
-sp500_members = []
+    for i in range(0, len(clean_tickers), BATCH_SIZE):
+        batch = clean_tickers[i : i + BATCH_SIZE]
+        print(f"Processing batch {i} to {i+len(batch)}...")
 
-while True:
-    event = session.nextEvent(500)
-    for msg in event:
-        if msg.messageType() == "ReferenceDataResponse":
-            sec_data = msg.getElement("securityData").getValue(0)
-            field_data = sec_data.getElement("fieldData")
+        hist_req = refDataService.createRequest("HistoricalDataRequest")
+        
+        for t in batch:
+            hist_req.getElement("securities").appendValue(t)
+        
+        for f in FIELDS:
+            hist_req.getElement("fields").appendValue(f)
+            
+        hist_req.set("periodicityAdjustment", "ACTUAL")
+        hist_req.set("periodicitySelection", "DAILY")
+        hist_req.set("startDate", START_DATE)
+        hist_req.set("endDate", END_DATE)
 
-            if field_data.hasElement("INDX_MEMBERS"):
-                members = field_data.getElement("INDX_MEMBERS")
+        session.sendRequest(hist_req)
 
-                for i in range(members.numValues()):
-                    entry = members.getValue(i)
-                    # The field name can sometimes vary, so we check possibilities
-                    if entry.hasElement("Member Ticker"):
-                        ticker = entry.getElementAsString("Member Ticker")
-                        # Append " US Equity" if not present (Bloomberg convention)
-                        if " Equity" not in ticker:
-                            ticker += " US Equity"
-                        sp500_members.append(ticker)
+        while True:
+            event = session.nextEvent(2000)
+            
+            if event.eventType() in [blpapi.Event.RESPONSE, blpapi.Event.PARTIAL_RESPONSE]:
+                for msg in event:
+                    # --- FIX 2: Check for Errors before parsing ---
+                    if msg.hasElement("responseError"):
+                        print(f"⚠️ API Error: {msg.getElement('responseError')}")
+                        continue
 
-    if event.eventType() == blpapi.Event.RESPONSE:
-        break
+                    if msg.hasElement("securityData"):
+                        sec_node = msg.getElement("securityData")
+                        ticker = sec_node.getElementAsString("security")
+                        
+                        if sec_node.hasElement("fieldData"):
+                            field_data_array = sec_node.getElement("fieldData")
+                            
+                            for k in range(field_data_array.numValues()):
+                                point = field_data_array.getValue(k)
+                                date_str = point.getElementAsString("date")
+                                
+                                row = {"ticker": ticker, "date": date_str}
+                                
+                                for f in FIELDS:
+                                    if point.hasElement(f):
+                                        row[f] = point.getElementAsFloat(f)
+                                    else:
+                                        row[f] = None
+                                
+                                all_data.append(row)
 
-print(f"Found {len(sp500_members)} S&P 500 constituents.")
+                if event.eventType() == blpapi.Event.RESPONSE:
+                    break 
+            
+            elif event.eventType() == blpapi.Event.TIMEOUT:
+                pass
 
-# ==========================================
-# STEP 2 — Retrieve Historical Data (OHLCV)
-# ==========================================
-print(f"Requesting historical price data ({START_DATE} to {END_DATE})...")
+    # ---------------------------------------------------------
+    # STEP 4: Save to CSV
+    # ---------------------------------------------------------
+    if all_data:
+        df = pd.DataFrame(all_data)
+        output_file = "data/sp500_prices.csv"
+        df.to_csv(output_file, index=False)
+        print(f"\n🎉 Done! Saved {len(df)} rows to: {output_file}")
+    else:
+        print("\n❌ Error: No price data was returned.")
 
-hist_request = service.createRequest("HistoricalDataRequest")
-
-# Add all 500+ tickers to the request
-for ticker in sp500_members:
-    hist_request.getElement("securities").appendValue(ticker)
-
-for field in FIELDS:
-    hist_request.getElement("fields").appendValue(field)
-
-hist_request.set("startDate", START_DATE)
-hist_request.set("endDate", END_DATE)
-hist_request.set("periodicitySelection", "DAILY")
-
-print("Sending large history request (this may take a moment)...")
-session.sendRequest(hist_request)
-
-records = []
-
-# Process the stream of response events
-while True:
-    event = session.nextEvent(500)
-    for msg in event:
-        if msg.messageType() == "HistoricalDataResponse":
-            security = msg.getElement("securityData").getElementAsString("security")
-            field_data = msg.getElement("securityData").getElement("fieldData")
-
-            for i in range(field_data.numValues()):
-                fd = field_data.getValueAsElement(i)
-                row = {"security": security, "date": fd.getElementAsDatetime("date")}
-
-                for field in FIELDS:
-                    if fd.hasElement(field):
-                        row[field] = fd.getElementAsFloat(field)
-                    else:
-                        row[field] = None
-
-                records.append(row)
-
-    if event.eventType() == blpapi.Event.RESPONSE:
-        break
-
-# ==========================================
-# STEP 3 — Save to CSV
-# ==========================================
-df = pd.DataFrame(records)
-df.to_csv(OUTPUT_PATH, index=False)
-
-print(f"🎉 Done! Saved {len(df)} rows to: {OUTPUT_PATH}")
+if __name__ == "__main__":
+    main()

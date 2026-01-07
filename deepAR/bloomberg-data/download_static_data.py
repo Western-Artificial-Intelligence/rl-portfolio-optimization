@@ -1,6 +1,3 @@
-# =======================
-# File: download_static_data.py
-# =======================
 import blpapi
 import pandas as pd
 from blpapi import SessionOptions, Session
@@ -15,84 +12,135 @@ STATIC_FIELDS = [
     "EQY_BETA"           # Beta (Risk metric)
 ]
 
-# ------- BLOOMBERG CONNECTION -------
-options = SessionOptions()
-options.setServerHost("localhost")
-options.setServerPort(8194)
+def main():
+    # ------- BLOOMBERG CONNECTION -------
+    options = SessionOptions()
+    options.setServerHost("localhost")
+    options.setServerPort(8194)
 
-session = Session(options)
-if not session.start():
-    raise Exception("Failed to start Bloomberg session")
+    session = Session(options)
+    if not session.start():
+        print("❌ Failed to start Bloomberg session")
+        return
 
-if not session.openService("//blp/refdata"):
-    raise Exception("Failed to open //blp/refdata service")
+    if not session.openService("//blp/refdata"):
+        print("❌ Failed to open //blp/refdata service")
+        return
 
-service = session.getService("//blp/refdata")
+    service = session.getService("//blp/refdata")
 
-# =============================
-# STEP 1 — Get Universe (NASDAQ-100)
-# =============================
-# We fetch the members again to ensure this file matches your price data
-print("Fetching NASDAQ-100 constituents...")
-ref_request = service.createRequest("ReferenceDataRequest")
-ref_request.getElement("securities").appendValue("NDX Index")
-ref_request.getElement("fields").appendValue("INDX_MEMBERS")
-session.sendRequest(ref_request)
+    # =============================
+    # STEP 1 — Get Universe (NASDAQ-100)
+    # =============================
+    print("Fetching NASDAQ-100 constituents...")
+    ref_request = service.createRequest("ReferenceDataRequest")
+    ref_request.getElement("securities").appendValue("NDX Index")
+    ref_request.getElement("fields").appendValue("INDX_MEMBERS")
+    session.sendRequest(ref_request)
 
-tickers = []
-while True:
-    event = session.nextEvent(500)
-    for msg in event:
-        if msg.messageType() == "ReferenceDataResponse":
-            data = msg.getElement("securityData").getValue(0).getElement("fieldData")
-            if data.hasElement("INDX_MEMBERS"):
-                members = data.getElement("INDX_MEMBERS")
-                for i in range(members.numValues()):
-                    tickers.append(members.getValue(i).getElementAsString("Member Ticker"))
-    if event.eventType() == blpapi.Event.RESPONSE:
-        break
+    tickers = []
+    while True:
+        event = session.nextEvent(500)
+        if event.eventType() == blpapi.Event.RESPONSE:
+            for msg in event:
+                if msg.messageType() == "ReferenceDataResponse":
+                    if msg.hasElement("securityData"):
+                        # securityData is an array, we must loop through it
+                        sec_data_array = msg.getElement("securityData")
+                        for k in range(sec_data_array.numValues()):
+                            sec_item = sec_data_array.getValue(k)
+                            field_data = sec_item.getElement("fieldData")
+                            
+                            if field_data.hasElement("INDX_MEMBERS"):
+                                members = field_data.getElement("INDX_MEMBERS")
+                                for i in range(members.numValues()):
+                                    member_data = members.getValue(i)
+                                    
+                                    # --- FIX: ROBUST FIELD CHECKING ---
+                                    t = None
+                                    if member_data.hasElement("Member Ticker and Exchange Code"):
+                                        t = member_data.getElementAsString("Member Ticker and Exchange Code")
+                                    elif member_data.hasElement("Member Ticker"):
+                                        t = member_data.getElementAsString("Member Ticker")
+                                    
+                                    if t:
+                                        tickers.append(t)
+            break
+        elif event.eventType() == blpapi.Event.TIMEOUT:
+            continue
 
-print(f"Found {len(tickers)} securities.")
+    print(f"Found {len(tickers)} securities.")
 
-# =============================
-# STEP 2 — Retrieve Static Data
-# =============================
-print(f"Requesting static fields: {STATIC_FIELDS}...")
-static_request = service.createRequest("ReferenceDataRequest")
+    if not tickers:
+        print("❌ No tickers found. Exiting.")
+        return
 
-for t in tickers:
-    static_request.getElement("securities").appendValue(t)
+    # ---------------------------------------------------------
+    # STEP 2: Normalize Tickers
+    # ---------------------------------------------------------
+    # 'AAPL UW' -> 'AAPL US Equity'
+    clean_tickers = [f"{t.split()[0]} US Equity" for t in tickers]
+    print(f"Sample normalized tickers: {clean_tickers[:3]}")
 
-for f in STATIC_FIELDS:
-    static_request.getElement("fields").appendValue(f)
+    # =============================
+    # STEP 3 — Retrieve Static Data
+    # =============================
+    print(f"Requesting static fields: {STATIC_FIELDS}...")
+    
+    # We can request all 100 tickers at once for ReferenceData (it handles larger batches better than History)
+    static_request = service.createRequest("ReferenceDataRequest")
 
-session.sendRequest(static_request)
+    for t in clean_tickers:
+        static_request.getElement("securities").appendValue(t)
 
-records = []
-while True:
-    event = session.nextEvent(500)
-    for msg in event:
-        if msg.messageType() == "ReferenceDataResponse":
-            sec_data_array = msg.getElement("securityData")
-            for i in range(sec_data_array.numValues()):
-                sec_item = sec_data_array.getValue(i)
-                security = sec_item.getElementAsString("security")
-                field_data = sec_item.getElement("fieldData")
-                
-                row = {"security": security}
-                for field in STATIC_FIELDS:
-                    if field_data.hasElement(field):
-                        row[field] = field_data.getElementAsString(field) if field != "CUR_MKT_CAP" and field != "EQY_BETA" else field_data.getElementAsFloat(field)
-                    else:
-                        row[field] = None
-                records.append(row)
+    for f in STATIC_FIELDS:
+        static_request.getElement("fields").appendValue(f)
 
-    if event.eventType() == blpapi.Event.RESPONSE:
-        break
+    session.sendRequest(static_request)
 
-# =============================
-# STEP 3 — Save to CSV
-# =============================
-df = pd.DataFrame(records)
-df.to_csv(OUTPUT_PATH, index=False)
-print("Done! Static data saved to:", OUTPUT_PATH)
+    records = []
+    while True:
+        event = session.nextEvent(500)
+        
+        # Process responses
+        if event.eventType() in [blpapi.Event.RESPONSE, blpapi.Event.PARTIAL_RESPONSE]:
+            for msg in event:
+                if msg.messageType() == "ReferenceDataResponse":
+                    if msg.hasElement("securityData"):
+                        sec_data_array = msg.getElement("securityData")
+                        for i in range(sec_data_array.numValues()):
+                            sec_item = sec_data_array.getValue(i)
+                            security = sec_item.getElementAsString("security")
+                            
+                            if sec_item.hasElement("fieldData"):
+                                field_data = sec_item.getElement("fieldData")
+                                
+                                row = {"security": security}
+                                for field in STATIC_FIELDS:
+                                    if field_data.hasElement(field):
+                                        # Handle Float vs String types safely
+                                        if field in ["CUR_MKT_CAP", "EQY_BETA"]:
+                                             row[field] = field_data.getElementAsFloat(field)
+                                        else:
+                                             row[field] = field_data.getElementAsString(field)
+                                    else:
+                                        row[field] = None
+                                records.append(row)
+            
+            if event.eventType() == blpapi.Event.RESPONSE:
+                break
+        elif event.eventType() == blpapi.Event.TIMEOUT:
+            continue
+
+    # =============================
+    # STEP 4 — Save to CSV
+    # =============================
+    if records:
+        df = pd.DataFrame(records)
+        df.to_csv(OUTPUT_PATH, index=False)
+        print(f"🎉 Done! Static data saved to: {OUTPUT_PATH}")
+    else:
+        print("❌ Error: No static data returned.")
+
+if __name__ == "__main__":
+    main()
