@@ -1,5 +1,7 @@
 # Portfolio Optimization with Reinforcement Learning and Real-Time Financial Feeds  
-**Western AI – 2025 Project**
+**Western AI – 2025-2026 Project**
+
+Dataset: https://drive.google.com/drive/folders/1DzsK6fLDA-q-fbjGWCoMtdj4BDn_JrkO?usp=sharing
 
 ## 📈 Overview  
 This project proposes a **hybrid AI-driven portfolio optimization system** that combines **Reinforcement Learning (RL)** for adaptive asset allocation with **Natural Language Processing (NLP)** for real-time sentiment analysis.  
