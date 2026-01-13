@@ -1,0 +1,50 @@
+{
+  "config": {
+    "hidden_size": 64,
+    "num_layers": 2,
+    "dropout": 0.1,
+    "embedding_dim": 16,
+    "batch_size": 64,
+    "learning_rate": 0.001,
+    "weight_decay": 1e-05,
+    "epochs": 30,
+    "patience": 10,
+    "context_length": 60,
+    "prediction_length": 5,
+    "train_split": 0.8,
+    "val_split": 0.1,
+    "target_column": "log_return",
+    "dynamic_features": [
+      "roll_vol_10",
+      "ret_5d",
+      "ret_20d",
+      "zvol"
+    ],
+    "static_features": [
+      "security",
+      "GICS_SECTOR_NAME",
+      "INDUSTRY_SECTOR",
+      "CUR_MKT_CAP",
+      "EQY_BETA"
+    ],
+    "num_series": 9
+  },
+  "metrics": {
+    "mae": "0.014897437",
+    "rmse": "0.02276285",
+    "crps_approx": "0.64043516",
+    "coverage_95": 0.9597597597597598,
+    "mean_std": "0.02228622"
+  },
+  "series_mapping": {
+    "AAPL US Equity": 0,
+    "AMZN US Equity": 1,
+    "META US Equity": 2,
+    "MSFT US Equity": 3,
+    "NDX Index": 4,
+    "NVDA US Equity": 5,
+    "PSQ US Equity": 6,
+    "SPX Index": 7,
+    "TSLA US Equity": 8
+  }
+}

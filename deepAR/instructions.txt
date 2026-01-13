@@ -1,0 +1,1 @@
+uv run python deepAR/train_deepar.py --data data/deepar_dataset.csv --epochs 30
