@@ -170,22 +170,22 @@ class SuperStateBuilder:
         """
         # DeepAR forecast features (log returns are typically small)
         self.forecast_norm = {
-            "forecast_mean": {"min": -0.1, "max": 0.1},    # Expected daily return
-            "forecast_std": {"min": 0.0, "max": 0.1},      # Volatility
-            "forecast_skew": {"min": -2.0, "max": 2.0},    # Skewness
-            "confidence": {"min": 0.0, "max": 1.0},        # Already normalized
-            "quantile_10": {"min": -0.15, "max": 0.05},    # Downside quantile
-            "quantile_90": {"min": -0.05, "max": 0.15},    # Upside quantile
+            "forecast_mean": {"min_val": -0.1, "max_val": 0.1},    # Expected daily return
+            "forecast_std": {"min_val": 0.0, "max_val": 0.1},      # Volatility
+            "forecast_skew": {"min_val": -2.0, "max_val": 2.0},    # Skewness
+            "confidence": {"min_val": 0.0, "max_val": 1.0},        # Already normalized
+            "quantile_10": {"min_val": -0.15, "max_val": 0.05},    # Downside quantile
+            "quantile_90": {"min_val": -0.05, "max_val": 0.15},    # Upside quantile
         }
         
         # FRED macro features
         self.fred_norm = {
-            "VIXCLS": {"min": 10.0, "max": 80.0},           # VIX range
-            "vix_regime": {"min": 0, "max": 3},             # 4 regimes (0-3)
-            "T10Y2Y": {"min": -1.5, "max": 2.5},            # Yield spread
-            "yield_inverted": {"min": 0, "max": 1},         # Binary flag
-            "FEDFUNDS": {"min": 0.0, "max": 6.0},           # Fed Funds rate
-            "fed_direction": {"min": -1, "max": 1},         # Hiking/cutting
+            "VIXCLS": {"min_val": 10.0, "max_val": 80.0},           # VIX range
+            "vix_regime": {"min_val": 0, "max_val": 3},             # 4 regimes (0-3)
+            "T10Y2Y": {"min_val": -1.5, "max_val": 2.5},            # Yield spread
+            "yield_inverted": {"min_val": 0, "max_val": 1},         # Binary flag
+            "FEDFUNDS": {"min_val": 0.0, "max_val": 6.0},           # Fed Funds rate
+            "fed_direction": {"min_val": -1, "max_val": 1},         # Hiking/cutting
         }
 
     def _normalize(self, value: float, min_val: float, max_val: float) -> float:
