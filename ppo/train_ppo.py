@@ -131,13 +131,18 @@ def load_training_data(data_path: str) -> pd.DataFrame:
     return df
 
 
-def create_environment(df: pd.DataFrame, use_super_state: bool = True) -> PortfolioEnv:
+def create_environment(
+    df: pd.DataFrame,
+    use_super_state: bool = True,
+    cached_states: dict = None,
+) -> PortfolioEnv:
     """
     Create and wrap the Portfolio Environment.
     
     Args:
         df: Training DataFrame
         use_super_state: Whether to use 64-dim Super-State observations
+        cached_states: Pre-computed super-states dict (optional, for fast training)
         
     Returns:
         Wrapped environment
@@ -149,6 +154,7 @@ def create_environment(df: pd.DataFrame, use_super_state: bool = True) -> Portfo
         reward_window=30,      # 30-day rolling window for Sharpe
         initial_cash=1_000_000,
         context_length=60,     # 60 days of history for DeepAR
+        cached_states=cached_states,  # Use pre-computed states if provided
     )
     
     # Wrap with Monitor for logging
@@ -205,6 +211,7 @@ def train(
     total_timesteps: int = 1_000_000,
     checkpoint_freq: int = 100_000,
     resume_from: str = None,
+    cache_path: str = None,  # Path to pre-computed super-states
 ):
     """
     Main training loop for PPO agent.
@@ -216,6 +223,7 @@ def train(
         total_timesteps: Total training timesteps
         checkpoint_freq: Checkpoint frequency
         resume_from: Path to checkpoint to resume from (optional)
+        cache_path: Path to pre-computed super-states .npz file (optional)
     """
     print("\n" + "=" * 60)
     print("PPO Training for Portfolio Optimization")
@@ -235,6 +243,22 @@ def train(
     tb_log_dir.mkdir(parents=True, exist_ok=True)
     print(f"TensorBoard log directory: {tb_log_dir}")
     
+    # Load cached super-states if provided
+    cached_states = None
+    if cache_path and Path(cache_path).exists():
+        print(f"\n✓ Loading cached super-states from: {cache_path}")
+        cache_data = np.load(cache_path, allow_pickle=True)
+        cached_states = {
+            'states': cache_data['states'],
+            'dates': cache_data['dates'],
+        }
+        print(f"  Loaded {len(cached_states['dates'])} pre-computed observations")
+        print(f"  Shape: {cached_states['states'].shape}")
+    elif cache_path:
+        print(f"\n⚠️ Cache file not found: {cache_path}")
+        print("  Run: python -m ppo.precompute_states")
+        print("  Falling back to slow mode (computing DeepAR each step)...")
+    
     # Load data
     df = load_training_data(data_path)
     
@@ -251,10 +275,10 @@ def train(
     print(f"  Training: {len(train_dates)} days ({train_df['date'].min()} to {train_df['date'].max()})")
     print(f"  Evaluation: {len(eval_dates)} days ({eval_df['date'].min()} to {eval_df['date'].max()})")
     
-    # Create environments
+    # Create environments (pass cached_states for fast training)
     print("\nCreating environments...")
-    train_env = create_environment(train_df, use_super_state=True)
-    eval_env = create_environment(eval_df, use_super_state=True)
+    train_env = create_environment(train_df, use_super_state=True, cached_states=cached_states)
+    eval_env = create_environment(eval_df, use_super_state=True, cached_states=cached_states)
     
     # Wrap in DummyVecEnv for SB3 compatibility
     train_env = DummyVecEnv([lambda: train_env])
@@ -371,7 +395,23 @@ def main():
         help="Path to checkpoint to resume training from",
     )
     
+    # Caching options
+    parser.add_argument(
+        "--use-cache",
+        action="store_true",
+        help="Use pre-computed super-states for 100x faster training",
+    )
+    parser.add_argument(
+        "--cache-path",
+        type=str,
+        default=str(PROJECT_ROOT / "data" / "super_states.npz"),
+        help="Path to pre-computed super-states file",
+    )
+    
     args = parser.parse_args()
+    
+    # Determine cache path
+    cache_path = args.cache_path if args.use_cache else None
     
     train(
         data_path=args.data,
@@ -380,6 +420,7 @@ def main():
         total_timesteps=args.timesteps,
         checkpoint_freq=args.checkpoint_freq,
         resume_from=args.resume,
+        cache_path=cache_path,
     )
 
 

@@ -81,6 +81,7 @@ class PortfolioEnv(gym.Env):
         drawdown_penalty=0.0,
         use_super_state=True,
         context_length=60,
+        cached_states=None,  # Pre-computed super-states from precompute_states.py
     ):
         """
         Initialize the Portfolio Environment.
@@ -121,20 +122,33 @@ class PortfolioEnv(gym.Env):
         self.drawdown_penalty = drawdown_penalty
         self.use_super_state = use_super_state
         self.context_length = context_length
+        
+        # Cached super-states for fast training
+        self.cached_states = cached_states  # Dict with 'states' and 'dates'
+        self.date_to_state_idx = {}
+        if cached_states is not None:
+            # Build date-to-index lookup for O(1) access
+            for idx, date_str in enumerate(cached_states['dates']):
+                self.date_to_state_idx[date_str] = idx
+            print(f"✓ Using cached super-states ({len(self.date_to_state_idx)} dates)")
 
         # Initialize data handler and execution simulator
         self.data_handler = DataHandler(self.df)
         self.simulator = ExecutionSimulator(self.initial_cash)
 
-        # Initialize SuperStateBuilder if enabled
+        # Initialize SuperStateBuilder ONLY if no cache and super-state enabled
         self.state_builder = None
-        if self.use_super_state:
+        if self.use_super_state and cached_states is None:
             if not SUPER_STATE_AVAILABLE:
                 raise ImportError(
                     "SuperStateBuilder not available. "
                     "Make sure ppo/super_state.py exists and is importable."
                 )
             self.state_builder = SuperStateBuilder(project_root=str(PROJECT_ROOT))
+            obs_dim = TOTAL_STATE_DIM  # 64
+            obs_low, obs_high = -1.0, 1.0
+        elif self.use_super_state:
+            # Using cache, dimensions same as super-state
             obs_dim = TOTAL_STATE_DIM  # 64
             obs_low, obs_high = -1.0, 1.0
         else:
@@ -348,14 +362,28 @@ class PortfolioEnv(gym.Env):
         """
         Build the observation vector.
         
-        If use_super_state=True: Returns 64-dim Super-State
-        If use_super_state=False: Returns legacy price+sentiment
+        Priority:
+        1. Use cached super-states if available (fastest)
+        2. Use SuperStateBuilder if no cache (slow, computes DeepAR)
+        3. Legacy mode: price + sentiment per asset
         """
         if row is None:
             return np.zeros(self.observation_space.shape, dtype=np.float32)
         
+        # FAST PATH: Use cached super-states
+        if self.use_super_state and self.cached_states is not None:
+            # Normalize date format for lookup
+            date_str = str(self.current_date)[:10]  # "YYYY-MM-DD"
+            
+            if date_str in self.date_to_state_idx:
+                idx = self.date_to_state_idx[date_str]
+                return self.cached_states['states'][idx].astype(np.float32)
+            else:
+                # Date not in cache, return zeros
+                return np.zeros(self.observation_space.shape, dtype=np.float32)
+        
+        # SLOW PATH: Use SuperStateBuilder (computes DeepAR inference)
         if self.use_super_state and self.state_builder is not None:
-            # Use SuperStateBuilder for 64-dim observation
             try:
                 obs = self.state_builder.build(
                     market_data=self.df,
@@ -366,19 +394,19 @@ class PortfolioEnv(gym.Env):
             except Exception as e:
                 print(f"Warning: SuperStateBuilder failed: {e}")
                 return np.zeros(self.observation_space.shape, dtype=np.float32)
-        else:
-            # Legacy mode: price + sentiment per asset
-            obs = []
-            for a in self.assets:
-                if hasattr(row, 'get'):
-                    price = row.get(a, 0)
-                    sentiment = row.get(f"sentiment_{a}", 0)
-                else:
-                    price = getattr(row, a, 0)
-                    sentiment = getattr(row, f"sentiment_{a}", 0)
-                obs.extend([price, sentiment])
+        
+        # LEGACY MODE: price + sentiment per asset
+        obs = []
+        for a in self.assets:
+            if hasattr(row, 'get'):
+                price = row.get(a, 0)
+                sentiment = row.get(f"sentiment_{a}", 0)
+            else:
+                price = getattr(row, a, 0)
+                sentiment = getattr(row, f"sentiment_{a}", 0)
+            obs.extend([price, sentiment])
 
-            return np.array(obs, dtype=np.float32)
+        return np.array(obs, dtype=np.float32)
 
     def render(self, mode="human"):
         """Render the current state."""
