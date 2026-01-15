@@ -434,6 +434,14 @@ class SuperStateBuilder:
             sentiment_features,  # Shape: (4,)
         ])
         
+        # CRITICAL: Sanitize NaN and Inf values to prevent PPO training corruption
+        # Replace NaN with 0.0, Inf with clipped values
+        if np.any(~np.isfinite(super_state)):
+            super_state = np.nan_to_num(super_state, nan=0.0, posinf=1.0, neginf=-1.0)
+        
+        # Ensure values are clipped to [-1, 1] range
+        super_state = np.clip(super_state, -1.0, 1.0)
+        
         assert super_state.shape == (TOTAL_STATE_DIM,), \
             f"Expected shape ({TOTAL_STATE_DIM},), got {super_state.shape}"
         

@@ -225,9 +225,15 @@ def train(
     print(f"Checkpoint frequency: {checkpoint_freq:,}")
     print()
     
-    # Create directories
+    # Create directories (pre-create TensorBoard run dir to avoid OneDrive issues)
     Path(checkpoint_dir).mkdir(parents=True, exist_ok=True)
     Path(log_dir).mkdir(parents=True, exist_ok=True)
+    
+    # Create specific run directory for TensorBoard (avoids OneDrive sync issues)
+    run_name = f"PPO_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    tb_log_dir = Path(log_dir) / run_name
+    tb_log_dir.mkdir(parents=True, exist_ok=True)
+    print(f"TensorBoard log directory: {tb_log_dir}")
     
     # Load data
     df = load_training_data(data_path)
@@ -267,7 +273,7 @@ def train(
         model = PPO(
             policy="MlpPolicy",
             env=train_env,
-            tensorboard_log=log_dir,
+            tensorboard_log=None,  # Disabled - OneDrive conflicts with TensorBoard
             **PPO_HYPERPARAMS,
         )
     
@@ -279,7 +285,7 @@ def train(
     # Create callbacks
     callbacks = create_callbacks(
         checkpoint_dir=checkpoint_dir,
-        log_dir=log_dir,
+        log_dir=str(tb_log_dir),  # Use pre-created dir
         eval_env=eval_env,
         checkpoint_freq=checkpoint_freq,
     )
