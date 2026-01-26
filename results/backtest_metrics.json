@@ -1,0 +1,16 @@
+{
+  "timestamp": "2026-01-26T13:32:01.656558",
+  "ppo_agent": {
+    "total_return": 0.4588538393957487,
+    "sharpe_ratio": 1.5625379943498316,
+    "max_drawdown": 0.13029225197923733,
+    "final_value": 1458853.8393957487,
+    "num_days": 349
+  },
+  "baseline_sp500": {
+    "total_return": 0.310021560364566,
+    "sharpe_ratio": 1.6247605823240485,
+    "max_drawdown": 0.08822415667759884,
+    "final_value": 1310021.560364566
+  }
+}
