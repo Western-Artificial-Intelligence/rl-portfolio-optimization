@@ -7,7 +7,7 @@
     "batch_size": 64,
     "learning_rate": 0.001,
     "weight_decay": 1e-05,
-    "epochs": 30,
+    "epochs": 50,
     "patience": 10,
     "context_length": 60,
     "prediction_length": 5,
@@ -30,11 +30,11 @@
     "num_series": 9
   },
   "metrics": {
-    "mae": "0.014897437",
-    "rmse": "0.02276285",
-    "crps_approx": "0.64043516",
-    "coverage_95": 0.9597597597597598,
-    "mean_std": "0.02228622"
+    "mae": "0.015074639",
+    "rmse": "0.022762246",
+    "crps_approx": "0.7493547",
+    "coverage_95": 0.9411411411411411,
+    "mean_std": "0.01956258"
   },
   "series_mapping": {
     "AAPL US Equity": 0,

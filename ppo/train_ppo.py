@@ -94,7 +94,7 @@ PPO_HYPERPARAMS = {
     },
     
     # Use GPU if available
-    "device": "auto",
+    "device": "cpu",
     
     # Verbosity level (1 = training info)
     "verbose": 1,

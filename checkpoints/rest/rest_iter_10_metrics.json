@@ -1,0 +1,18 @@
+{
+  "iteration": 10,
+  "eval_metrics": {
+    "total_return": 0.21850573290417322,
+    "sharpe_ratio": 1.538002004509886,
+    "max_drawdown": 0.11790040229618602,
+    "num_eval_episodes": 50
+  },
+  "elite_stats": {
+    "num_elites": 30,
+    "mean_score": 2.936888468923972,
+    "mean_sharpe": 3.3795745107047144,
+    "mean_mdd": 0.08853720835614863
+  },
+  "all_scores_mean": -0.35143155698516904,
+  "all_scores_std": 1.9585581694733671,
+  "timestamp": "2026-01-29T16:08:09.866177"
+}
