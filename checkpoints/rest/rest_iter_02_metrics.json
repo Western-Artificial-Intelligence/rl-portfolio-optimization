@@ -1,18 +1,18 @@
 {
   "iteration": 2,
   "eval_metrics": {
-    "total_return": 0.2228964227690959,
-    "sharpe_ratio": 2.896792723699476,
-    "max_drawdown": 0.1074179049889726,
+    "total_return": 0.09466124669875695,
+    "sharpe_ratio": 1.3028494676579438,
+    "max_drawdown": 0.10796964785365573,
     "num_eval_episodes": 30
   },
   "elite_stats": {
-    "num_elites": 37,
-    "mean_score": 2.1898452613856474,
-    "mean_sharpe": 2.720902523457074,
-    "mean_mdd": 0.10621145241428519
+    "num_elites": 75,
+    "mean_score": 2.0136683084702183,
+    "mean_sharpe": 2.5504917681447097,
+    "mean_mdd": 0.1073646919348982
   },
-  "all_scores_mean": 0.0008352120586520803,
-  "all_scores_std": 1.6678523801358207,
-  "timestamp": "2026-01-29T02:45:41.532524"
+  "all_scores_mean": -0.10156448862345417,
+  "all_scores_std": 1.7045341350475143,
+  "timestamp": "2026-01-29T16:02:36.322865"
 }

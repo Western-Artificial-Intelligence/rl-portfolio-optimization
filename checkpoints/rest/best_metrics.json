@@ -1,10 +1,10 @@
 {
-  "iteration": 2,
+  "iteration": 5,
   "eval_metrics": {
-    "total_return": 0.2228964227690959,
-    "sharpe_ratio": 2.896792723699476,
-    "max_drawdown": 0.1074179049889726,
+    "total_return": 0.17550567664589528,
+    "sharpe_ratio": 2.4661539978825675,
+    "max_drawdown": 0.07847373030961018,
     "num_eval_episodes": 30
   },
-  "timestamp": "2026-01-29T02:45:41.540006"
+  "timestamp": "2026-01-29T16:04:32.187029"
 }
