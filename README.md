@@ -85,7 +85,7 @@ The agent observes a **64-dimensional "Super-State"** combining forecasts, macro
 ### Prerequisites
 
 - Python 3.10+
-- [UV](https://docs.astral.sh/uv/) (recommended) or pip
+- [UV](https://pythdocs.astral.sh/uv/) (recommended) or pip
 
 ### Installation
 

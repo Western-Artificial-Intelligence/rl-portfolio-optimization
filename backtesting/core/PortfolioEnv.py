@@ -130,7 +130,7 @@ class PortfolioEnv(gym.Env):
             # Build date-to-index lookup for O(1) access
             for idx, date_str in enumerate(cached_states['dates']):
                 self.date_to_state_idx[date_str] = idx
-            print(f"✓ Using cached super-states ({len(self.date_to_state_idx)} dates)")
+            print(f"[OK] Using cached super-states ({len(self.date_to_state_idx)} dates)")
 
         # Initialize data handler and execution simulator
         self.data_handler = DataHandler(self.df)

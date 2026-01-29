@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-01-29T02:53:30.319136",
+  "model_name": "PPO",
+  "agent": {
+    "total_return": 0.3823945482929905,
+    "sharpe_ratio": 1.489451102812715,
+    "max_drawdown": 0.09044320412593161,
+    "final_value": 1382394.5482929905,
+    "num_days": 349
+  },
+  "baseline_sp500": {
+    "total_return": 0.310021560364566,
+    "sharpe_ratio": 1.6247605823240485,
+    "max_drawdown": 0.08822415667759884,
+    "final_value": 1310021.560364566
+  }
+}

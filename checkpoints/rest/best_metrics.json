@@ -1,0 +1,10 @@
+{
+  "iteration": 2,
+  "eval_metrics": {
+    "total_return": 0.2228964227690959,
+    "sharpe_ratio": 2.896792723699476,
+    "max_drawdown": 0.1074179049889726,
+    "num_eval_episodes": 30
+  },
+  "timestamp": "2026-01-29T02:45:41.540006"
+}
